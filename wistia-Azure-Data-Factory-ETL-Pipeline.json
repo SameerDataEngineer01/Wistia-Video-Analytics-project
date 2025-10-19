@@ -1,0 +1,515 @@
+{
+    "name": "pl_wistia_main_pipeline",
+    "properties": {
+        "activities": [
+            {
+                "name": "Run_API_Ingestion_00",
+                "type": "DatabricksNotebook",
+                "dependsOn": [],
+                "policy": {
+                    "timeout": "0.12:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "notebookPath": "/Users/sameerdataengineeracademy@gmail.com/wistia-01"
+                },
+                "linkedServiceName": {
+                    "referenceName": "AzureDatabricks_ls",
+                    "type": "LinkedServiceReference"
+                }
+            },
+            {
+                "name": "Run_API_Ingestion_01",
+                "type": "DatabricksNotebook",
+                "dependsOn": [
+                    {
+                        "activity": "Run_API_Ingestion_00",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "timeout": "0.12:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "notebookPath": "/Users/sameerdataengineeracademy@gmail.com/wistia-02"
+                },
+                "linkedServiceName": {
+                    "referenceName": "AzureDatabricks_ls",
+                    "type": "LinkedServiceReference"
+                }
+            },
+            {
+                "name": "Run_Data_Processing",
+                "type": "DatabricksNotebook",
+                "dependsOn": [
+                    {
+                        "activity": "Run_API_Ingestion_01",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "timeout": "0.12:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "notebookPath": "/Users/sameerdataengineeracademy@gmail.com/wistia-03"
+                },
+                "linkedServiceName": {
+                    "referenceName": "AzureDatabricks_ls",
+                    "type": "LinkedServiceReference"
+                }
+            },
+            {
+                "name": "Copy_dim_media_to_SQL",
+                "type": "Copy",
+                "dependsOn": [
+                    {
+                        "activity": "Run_Data_Processing",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "timeout": "0.12:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "source": {
+                        "type": "ParquetSource",
+                        "storeSettings": {
+                            "type": "AzureBlobStorageReadSettings",
+                            "recursive": true,
+                            "wildcardFolderPath": {
+                                "value": "dim-media",
+                                "type": "Expression"
+                            },
+                            "wildcardFileName": "*.parquet",
+                            "enablePartitionDiscovery": false
+                        },
+                        "formatSettings": {
+                            "type": "ParquetReadSettings"
+                        }
+                    },
+                    "sink": {
+                        "type": "AzureSqlSink",
+                        "preCopyScript": {
+                            "value": "TRUNCATE TABLE stg_dim_media",
+                            "type": "Expression"
+                        },
+                        "writeBehavior": "insert",
+                        "sqlWriterUseTableLock": false,
+                        "disableMetricsCollection": false
+                    },
+                    "enableStaging": false,
+                    "translator": {
+                        "type": "TabularTranslator",
+                        "mappings": [
+                            {
+                                "source": {
+                                    "name": "media_id",
+                                    "type": "String",
+                                    "physicalType": "UTF8"
+                                },
+                                "sink": {
+                                    "name": "media_id",
+                                    "type": "String",
+                                    "physicalType": "nvarchar"
+                                }
+                            },
+                            {
+                                "source": {
+                                    "name": "title",
+                                    "type": "String",
+                                    "physicalType": "UTF8"
+                                },
+                                "sink": {
+                                    "name": "title",
+                                    "type": "String",
+                                    "physicalType": "nvarchar"
+                                }
+                            },
+                            {
+                                "source": {
+                                    "name": "url",
+                                    "type": "String",
+                                    "physicalType": "UTF8"
+                                },
+                                "sink": {
+                                    "name": "url",
+                                    "type": "String",
+                                    "physicalType": "nvarchar"
+                                }
+                            },
+                            {
+                                "source": {
+                                    "name": "channel",
+                                    "type": "String",
+                                    "physicalType": "UTF8"
+                                },
+                                "sink": {
+                                    "name": "channel",
+                                    "type": "String",
+                                    "physicalType": "nvarchar"
+                                }
+                            },
+                            {
+                                "source": {
+                                    "name": "created_at",
+                                    "type": "DateTime",
+                                    "physicalType": "INT96"
+                                },
+                                "sink": {
+                                    "name": "created_at",
+                                    "type": "DateTime",
+                                    "physicalType": "datetime2"
+                                }
+                            },
+                            {
+                                "source": {
+                                    "name": "processed_at",
+                                    "type": "DateTime",
+                                    "physicalType": "INT96"
+                                },
+                                "sink": {
+                                    "name": "processed_at",
+                                    "type": "DateTime",
+                                    "physicalType": "datetime2"
+                                }
+                            }
+                        ],
+                        "typeConversion": true,
+                        "typeConversionSettings": {
+                            "allowDataTruncation": true,
+                            "treatBooleanAsNumber": false
+                        }
+                    }
+                },
+                "inputs": [
+                    {
+                        "referenceName": "ds_Parquet_dim_media",
+                        "type": "DatasetReference"
+                    }
+                ],
+                "outputs": [
+                    {
+                        "referenceName": "ds_sql_stg_dim_media",
+                        "type": "DatasetReference"
+                    }
+                ]
+            },
+            {
+                "name": "ds_parquet_dim_visitor",
+                "type": "Copy",
+                "dependsOn": [
+                    {
+                        "activity": "Run_Data_Processing",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "timeout": "0.12:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "source": {
+                        "type": "ParquetSource",
+                        "storeSettings": {
+                            "type": "AzureBlobStorageReadSettings",
+                            "recursive": true,
+                            "wildcardFolderPath": {
+                                "value": "dim-visitor",
+                                "type": "Expression"
+                            },
+                            "wildcardFileName": "*.parquet",
+                            "enablePartitionDiscovery": false
+                        },
+                        "formatSettings": {
+                            "type": "ParquetReadSettings"
+                        }
+                    },
+                    "sink": {
+                        "type": "AzureSqlSink",
+                        "preCopyScript": {
+                            "value": "TRUNCATE TABLE stg_dim_visitor",
+                            "type": "Expression"
+                        },
+                        "writeBehavior": "insert",
+                        "sqlWriterUseTableLock": false
+                    },
+                    "enableStaging": false,
+                    "translator": {
+                        "type": "TabularTranslator",
+                        "mappings": [
+                            {
+                                "source": {
+                                    "name": "visitor_id",
+                                    "type": "String",
+                                    "physicalType": "UTF8"
+                                },
+                                "sink": {
+                                    "name": "visitor_id",
+                                    "type": "String",
+                                    "physicalType": "nvarchar"
+                                }
+                            },
+                            {
+                                "source": {
+                                    "name": "ip_address",
+                                    "type": "String",
+                                    "physicalType": "UTF8"
+                                },
+                                "sink": {
+                                    "name": "ip_address",
+                                    "type": "String",
+                                    "physicalType": "nvarchar"
+                                }
+                            },
+                            {
+                                "source": {
+                                    "name": "country",
+                                    "type": "String",
+                                    "physicalType": "UTF8"
+                                },
+                                "sink": {
+                                    "name": "country",
+                                    "type": "String",
+                                    "physicalType": "nvarchar"
+                                }
+                            },
+                            {
+                                "source": {
+                                    "name": "processed_at",
+                                    "type": "DateTime",
+                                    "physicalType": "INT96"
+                                },
+                                "sink": {
+                                    "name": "processed_at",
+                                    "type": "DateTime",
+                                    "physicalType": "datetime2"
+                                }
+                            }
+                        ],
+                        "typeConversion": true,
+                        "typeConversionSettings": {
+                            "allowDataTruncation": true,
+                            "treatBooleanAsNumber": false
+                        }
+                    }
+                },
+                "inputs": [
+                    {
+                        "referenceName": "ds_parquet_dim_visitor",
+                        "type": "DatasetReference"
+                    }
+                ],
+                "outputs": [
+                    {
+                        "referenceName": "ds_sql_stg_dim_visitor",
+                        "type": "DatasetReference"
+                    }
+                ]
+            },
+            {
+                "name": "ds_parquet_fact_engagement",
+                "type": "Copy",
+                "dependsOn": [
+                    {
+                        "activity": "Run_Data_Processing",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "timeout": "0.12:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "source": {
+                        "type": "ParquetSource",
+                        "storeSettings": {
+                            "type": "AzureBlobStorageReadSettings",
+                            "recursive": true,
+                            "wildcardFolderPath": {
+                                "value": "fact-engagement",
+                                "type": "Expression"
+                            },
+                            "wildcardFileName": "*.parquet",
+                            "enablePartitionDiscovery": false
+                        },
+                        "formatSettings": {
+                            "type": "ParquetReadSettings"
+                        }
+                    },
+                    "sink": {
+                        "type": "AzureSqlSink",
+                        "preCopyScript": {
+                            "value": "TRUNCATE TABLE stg_fact_engagement",
+                            "type": "Expression"
+                        },
+                        "writeBehavior": "insert",
+                        "sqlWriterUseTableLock": false
+                    },
+                    "enableStaging": false,
+                    "translator": {
+                        "type": "TabularTranslator",
+                        "mappings": [
+                            {
+                                "source": {
+                                    "name": "media_id",
+                                    "type": "String",
+                                    "physicalType": "UTF8"
+                                },
+                                "sink": {
+                                    "name": "media_id",
+                                    "type": "String",
+                                    "physicalType": "nvarchar"
+                                }
+                            },
+                            {
+                                "source": {
+                                    "name": "visitor_id",
+                                    "type": "String",
+                                    "physicalType": "UTF8"
+                                },
+                                "sink": {
+                                    "name": "visitor_id",
+                                    "type": "String",
+                                    "physicalType": "nvarchar"
+                                }
+                            },
+                            {
+                                "source": {
+                                    "name": "date",
+                                    "type": "DateTime",
+                                    "physicalType": "DATE"
+                                },
+                                "sink": {
+                                    "name": "date",
+                                    "type": "Date",
+                                    "physicalType": "date"
+                                }
+                            },
+                            {
+                                "source": {
+                                    "name": "play_count",
+                                    "type": "Int64",
+                                    "physicalType": "INT64"
+                                },
+                                "sink": {
+                                    "name": "play_count",
+                                    "type": "Int32",
+                                    "physicalType": "int"
+                                }
+                            },
+                            {
+                                "source": {
+                                    "name": "play_rate",
+                                    "type": "Double",
+                                    "physicalType": "DOUBLE"
+                                },
+                                "sink": {
+                                    "name": "play_rate",
+                                    "type": "Decimal",
+                                    "physicalType": "decimal",
+                                    "scale": 2,
+                                    "precision": 5
+                                }
+                            },
+                            {
+                                "source": {
+                                    "name": "total_watch_time_seconds",
+                                    "type": "Double",
+                                    "physicalType": "DOUBLE"
+                                },
+                                "sink": {
+                                    "name": "total_watch_time",
+                                    "type": "Int32",
+                                    "physicalType": "int"
+                                }
+                            },
+                            {
+                                "source": {
+                                    "name": "avg_percent_watched",
+                                    "type": "Double",
+                                    "physicalType": "DOUBLE"
+                                },
+                                "sink": {
+                                    "name": "watched_percent",
+                                    "type": "Decimal",
+                                    "physicalType": "decimal",
+                                    "scale": 2,
+                                    "precision": 5
+                                }
+                            },
+                            {
+                                "source": {
+                                    "name": "loaded_at",
+                                    "type": "DateTime",
+                                    "physicalType": "INT96"
+                                },
+                                "sink": {
+                                    "name": "loaded_at",
+                                    "type": "DateTime",
+                                    "physicalType": "datetime2"
+                                }
+                            }
+                        ],
+                        "typeConversion": true,
+                        "typeConversionSettings": {
+                            "allowDataTruncation": true,
+                            "treatBooleanAsNumber": false
+                        }
+                    }
+                },
+                "inputs": [
+                    {
+                        "referenceName": "ds_parquet_fact_engagement",
+                        "type": "DatasetReference"
+                    }
+                ],
+                "outputs": [
+                    {
+                        "referenceName": "ds_sql_stg_fact_engagement",
+                        "type": "DatasetReference"
+                    }
+                ]
+            }
+        ],
+        "annotations": [],
+        "lastPublishTime": "2025-10-10T21:39:57Z"
+    },
+    "type": "Microsoft.DataFactory/factories/pipelines"
+}
